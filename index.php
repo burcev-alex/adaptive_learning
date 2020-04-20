@@ -6,17 +6,6 @@ $token = '8be9314e213c01a9a42b46c6e90d5352';
 
 $MoodleRest = new MoodleRest($urlServer, $token);
 
-$dataRequest = [
-    "notes" => [
-        [
-            "userid" => 1, //id of the user the note is about
-            "publishstate" => "personal",  //'personal', 'course' or 'site'
-            "text" => "Тестовое сообщение из <b>WS</b>",
-            "format" => 1
-        ]
-    ]
-];
-
 $parametersRequest = [
     "notes" => [
         [
