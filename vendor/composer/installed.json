@@ -1,0 +1,38 @@
+[
+    {
+        "name": "llagerlof/moodlerest",
+        "version": "2.3.0",
+        "version_normalized": "2.3.0.0",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/llagerlof/MoodleRest.git",
+            "reference": "9ddccb80b0778d3297d9815fc33849337c38046e"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/llagerlof/MoodleRest/zipball/9ddccb80b0778d3297d9815fc33849337c38046e",
+            "reference": "9ddccb80b0778d3297d9815fc33849337c38046e",
+            "shasum": ""
+        },
+        "time": "2019-12-20T12:04:37+00:00",
+        "type": "library",
+        "installation-source": "dist",
+        "autoload": {
+            "classmap": [
+                "MoodleRest.php"
+            ]
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Lawrence Lagerlof",
+                "email": "llagerlof@gmail.com"
+            }
+        ],
+        "description": "MoodleRest is a PHP class to query Moodle REST webservices",
+        "homepage": "https://github.com/llagerlof"
+    }
+]
