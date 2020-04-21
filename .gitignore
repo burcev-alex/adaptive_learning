@@ -1,0 +1,27 @@
+# files
+.DS_Store
+Thumbs.db
+*.tar.gz*
+/restore.php
+*.js.orig
+*.old
+*.js.base
+*.php.orig
+*.php.base
+*.css.orig
+*.css.base
+/log.txt
+/1-dump.html
+/*-dump.html
+/test/
+/.idea/
+/.vscode/
+# core
+/.htaccess
+/vendor/*
+/redisadmin/*
+/log.txt
+/test*.php
+log.htm
+/tests
+/exceptions.log
