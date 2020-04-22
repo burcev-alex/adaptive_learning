@@ -4,6 +4,9 @@ import sys
 from tkinter.filedialog import *
 from tkinter.messagebox import *
 import numpy
+import json
+import base64
+from io import StringIO
 import numpy as np
 from numpy import *
 from sklearn.cluster import KMeans
@@ -12,10 +15,12 @@ import redis
 import scipy
 from nltk.stem import SnowballStemmer
 from nltk.corpus import brown
+import time
 
 class LSA:
     def __init__(self, docs, stem, stopwords):
         self.docs = docs
+        self.status = 0
         self.doc = [w for w in docs]
         self.stem = stem
         self.stopwords = stopwords
@@ -186,7 +191,7 @@ class LSA:
                         cs.append(w)
             sc="Евклидова мера расстояния "
             tr ='№ Док %s- %s-%s -Общие слова -%s'%(aa[i],bb[i],sc,cs)
-            if (float(bb[i]) >= 0.3) & (float((len(cs)/len(self.doc[0].split())*100)) > 30):
+            if (float(bb[i]) >= 0.35) & (float((len(cs)/len(self.doc[0].split())*100)) > 30):
                 resultActial = 1
             else:
                 resultActial = 0
@@ -194,10 +199,7 @@ class LSA:
             print(tr)
             print("------ \n")
 
-        if resultActial == 1:
-            self.out_green("Базовый текст рекомендованный к рассмотрению")
-        else:
-            self.out_red("Базовый текст нельзя рекоммендовать к изучению")
+        self.status = resultActial
 
         return resultActial
     def out_green(self, text):
@@ -212,16 +214,56 @@ class LSA:
     def out_blue(self, text):
         print("\033[34m {}" .format(text))
         print("\033[0m")
+    def getResult(self):
+        if self.status == 1:
+            self.out_green("Базовый текст рекомендованный к рассмотрению")
+        else:
+            self.out_red("Базовый текст нельзя рекоммендовать к изучению")
+
+        return self.status
+        
 
 
 stem = 'russian'
 stopwords = nltk.corpus.stopwords.words(stem)
-docs = [
-    "Какими недостатками обладает латентно-семантический анализ (LSA)?",
-    "Известные реализация латентно-семантического анализа (LSA) средствами языка программирования Python [1,2] обладают рядом существенных методических недостатков. Не приведены корреляционные матрицы слов и документов. Эти матрицы позволяют выявить скрытые связи. Отсутствует кластерный анализ для распределения слов и документов. Нет гибкой графической реализации для анализа семантического пространства, что крайне осложняет анализ результатов. Пользователь не имеет возможности оценить влияние исключения слов, которые встречаются один раз, метода определения семантического расстояния между словами и документами. Более того, могут возникать ситуации, когда после исключения слов, встречающихся только один раз, нарушается размерность частотной матрицы и её сингулярное разложение становиться невозможным. Пользователь получает сообщение об ошибке, не понимая их причин сетуя на недостатки программных средств Python. Сразу хочу отметить, что статья рассчитана на аудиторию не только знакомую с методом LSA, но и имеющая минимальный опыт его практического применения. Поэтому используя для тестирования программы стандартный набор англоязычных коротких сообщений, приведу распечатку исходных данных и результаты их обработки и график семантического пространства."
-]
 
+def decode_redis(src):
+    if isinstance(src, list):
+        rv = list()
+        for key in src:
+            rv.append(decode_redis(key))
+        return rv
+    elif isinstance(src, dict):
+        rv = dict()
+        for key in src:
+            rv[key.decode()] = decode_redis(src[key])
+        return rv
+    elif isinstance(src, bytes):
+        return src.decode()
+    else:
+        raise Exception("type not handled: " +type(src))
 
-# вывод результата анализа текста
-obj = LSA(docs, stem, stopwords)
-obj.STart()
+io = StringIO()
+r = redis.Redis()
+sourceData = r.hgetall("lsa");
+sourceData = decode_redis(sourceData)
+for key in sourceData:
+    item = json.loads(base64.b64decode(sourceData[key]).decode('utf-8'))
+    print(item)
+    
+    docs = [
+        item['questionText'],
+        item['pageText']
+    ]
+
+    # вывод результата анализа текста
+    obj = LSA(docs, stem, stopwords)
+    obj.STart()
+    result = obj.getResult()
+
+    current_milli_time = lambda: int(round(time.time() * 1000))
+    
+    if result == 1 :
+        tmpStr = json.dumps(item).encode('utf8')
+        strBase64 = base64.b64encode(tmpStr)
+        r.hset('notes', '{0}{1}'.format('note_', key), strBase64)

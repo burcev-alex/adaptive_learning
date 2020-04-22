@@ -23,7 +23,7 @@ class RedisStorage implements Storage
 			$redis = $this->entity();
 
 			if(is_array($object)) {
-				$content = base64_encode(serialize($object));
+				$content = base64_encode(json_encode($object));
 			}
 			else{
 				$content = base64_encode($object);
@@ -52,7 +52,7 @@ class RedisStorage implements Storage
 		foreach ($resource as $k=>$item) {
 			$strings = base64_decode($item);
 			if(substr_count($strings, "{") > 0) {
-				$result[$k] = unserialize($strings);
+				$result[$k] = json_decode($strings, true);
 			}
 			else{
 				$result[$k] = $strings;

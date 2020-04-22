@@ -125,6 +125,7 @@ if (count($dataQuizzes["quizzes"]) > 0) {
 
             echo "<tr><td colspan='".count($value)."'>Вопросы на которые был дан не верный ответ:<br/>";
             $questionsIncorrectAnswers = [];
+            $questionsIncorrectAnswersId = [];
             foreach ($dataAttemptReview['questions'] as $arQuestion) {
                 // собрать список вопросов, по которым был дан не верный ответ
                 if ($arQuestion['status'] == 'Incorrect') {
@@ -132,9 +133,10 @@ if (count($dataQuizzes["quizzes"]) > 0) {
                     // сделано через костыль, решение не универсальное
                     $tmp = explode('class="qtext">', $arQuestion['html']);
                     $tmp2 =explode('<div class="ablock">', $tmp[1]);
-                    $textQuestion = strip_tags($tmp2[0]);
+                    $textQuestion = strip_tags(str_replace("&nbsp;", " ", htmlspecialchars_decode($tmp2[0])));
 
                     $questionsIncorrectAnswers[] = $textQuestion;
+                    $questionsIncorrectAnswersId[] = $arQuestion['number'];
                 }
             }
 
@@ -146,13 +148,13 @@ if (count($dataQuizzes["quizzes"]) > 0) {
                         // сохраняем в Redis
                         // вопрос и текст, где нужно найти соотвествие
                         $repository->save('lsa', [
-                            'pageId' => $arPage['id'],
+                            'pageId' => $arPage['coursemodule'],
                             'courseId' => $courseId,
                             'quizId' => $quizId,
-                            'questionId' => $arQuestion['id'],
+                            'questionId' => $questionsIncorrectAnswersId[$k],
                             'questionText' => $text,
                             'attemptId' => $value['id'],
-                            'pageText' => $arPage['content']
+                            'pageText' => strip_tags(str_replace("&nbsp;", " ", htmlspecialchars_decode($arPage['content'])))
                         ]);
                     }
                 }
