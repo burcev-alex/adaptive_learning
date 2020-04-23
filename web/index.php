@@ -22,6 +22,7 @@ $redis = new \Predis\Client(
 );
 
 $userId = 4; // Александр Бурцев
+$courseId = 2; // ID курса
 
 libxml_use_internal_errors(true);
 /* Createa a new DomDocument object */
@@ -38,27 +39,6 @@ function p($arr, $console = false)
     }
 }
 
-/*
-$parametersRequest = [
-    "notes" => [
-        [
-            "userid" => 1, //id of the user the note is about
-            "publishstate" => "personal",  //'personal', 'course' or 'site'
-            "courseid" => 2,
-            "text" => "Тестовое сообщение из <b>WS</b>",
-            "format" => 1
-        ]
-    ]
-];
-
-// отправить персональное уведомление
-$note = $MoodleRest->request('core_notes_create_notes', $parametersRequest, MoodleRest::METHOD_POST);
-
-p($note);
-
-*/
-
-$courseId = 2;
 $parametersRequest = [
     "courseids" => [
         $courseId
