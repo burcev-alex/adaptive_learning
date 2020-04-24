@@ -13,9 +13,13 @@ from sklearn.cluster import KMeans
 import nltk
 import redis
 import scipy
-from nltk.stem import SnowballStemmer
 from nltk.corpus import brown
+from datetime import datetime
 import time
+from ukrstemmer import UkrainianStemmer
+
+start_time = datetime.now()
+
 
 class LSA:
     def __init__(self, docs, stem, stopwords):
@@ -24,173 +28,183 @@ class LSA:
         self.doc = [w for w in docs]
         self.stem = stem
         self.stopwords = stopwords
-        self.stemmer = SnowballStemmer(stem)
+
     def STart(self):
-        print('Исходные документы\n\n')
-        for k, v in enumerate(docs):
-            print('Док--%u | Текст-%s \n\n'%(k,v)) 
-        t=" "
-        word=nltk.word_tokenize((' ').join(self.doc))
-        stopword=[self.stemmer.stem(w).lower() for w in self.stopwords]
-        return self.WordStopDoc(t,stopword)
+        #print('Исходные документы\n\n')
+        #for k, v in enumerate(docs):
+        #    print('Док--%u | Текст-%s \n\n' % (k, v))
+        t = " "
+        word = nltk.word_tokenize((' ').join(self.doc))
+        stopword = [UkrainianStemmer(w).stem_word().lower() for w in self.stopwords]
+        return self.WordStopDoc(t, stopword)
+
     def word_1(self):
-        word=nltk.word_tokenize((' ').join(self.doc))
-        n=[self.stemmer.stem(w).lower() for w in word if len(w) >1 and w.isalpha()]
-        stopword=[self.stemmer.stem(w).lower() for w in self.stopwords]
-        fdist=nltk.FreqDist(n)
-        t=fdist.hapaxes()
-        return self.WordStopDoc(t,stopword)
-    def WordStopDoc(self,t,stopword):
-        d={}
-        c=[]
-        p={}
-        for i in range(0,len(self.doc)):
-            word=nltk.word_tokenize(self.doc[i])
-            word_stem=[self.stemmer.stem(w).lower()  for w in word if len(w)>1 and  w.isalpha()]
-            word_stop=[ w for w in word_stem if w not in stopword]
-            words=[ w for w in word_stop if w not in t]
-            p[i]=[w for w in words]
+        word = nltk.word_tokenize((' ').join(self.doc))
+        n = [UkrainianStemmer(w).stem_word().lower()
+             for w in word if len(w) > 1 and w.isalpha()]
+        stopword = [UkrainianStemmer(w).stem_word().lower() for w in self.stopwords]
+        fdist = nltk.FreqDist(n)
+        t = fdist.hapaxes()
+        return self.WordStopDoc(t, stopword)
+
+    def WordStopDoc(self, t, stopword):
+        d = {}
+        c = []
+        p = {}
+        for i in range(0, len(self.doc)):
+            word = nltk.word_tokenize(self.doc[i])
+            word_stem = [UkrainianStemmer(w).stem_word().lower()
+                         for w in word if len(w) > 1 and w.isalpha()]
+            word_stop = [w for w in word_stem if w not in stopword]
+            words = [w for w in word_stop if w not in t]
+            p[i] = [w for w in words]
             for w in words:
                 if w not in c:
-                        c.append(w)
-                        d[w]= [i]
+                    c.append(w)
+                    d[w] = [i]
                 elif w in c:
-                        d[w]= d[w]+[i]
-        return self.Create_Matrix(d,c,p)
-    def Create_Matrix(self,d,c,p):
-        a=len(c)
-        b=len(self.doc)
-        A = numpy.zeros([a,b])
+                    d[w] = d[w]+[i]
+        return self.Create_Matrix(d, c, p)
+
+    def Create_Matrix(self, d, c, p):
+        a = len(c)
+        b = len(self.doc)
+        A = numpy.zeros([a, b])
         c.sort()
         for i, k in enumerate(c):
             for j in d[k]:
-                A[i,j] += 1
-        return self.Analitik_Matrix(A,c,p) 
-    def Analitik_Matrix(self,A,c,p):
+                A[i, j] += 1
+        return self.Analitik_Matrix(A, c, p)
+
+    def Analitik_Matrix(self, A, c, p):
         wdoc = sum(A, axis=0)
-        pp=[]
-        q=-1
+        pp = []
+        q = -1
         for w in wdoc:
-            q=q+1
-            if w==0:
+            q = q+1
+            if w == 0:
                 pp.append(q)
-        if len(pp)!=0:
+        if len(pp) != 0:
             for k in pp:
                 self.doc.pop(k)
-            self.word_1()  
-        elif len(pp)==0:
+            self.word_1()
+        elif len(pp) == 0:
             rows, cols = A.shape
-            nn=[]
+            nn = []
             for i, row in enumerate(A):
-                st=(c[i], row)
-                stt=sum(row)
+                st = (c[i], row)
+                stt = sum(row)
                 nn.append(stt)
-            return self.TF_IDF(A,c,p)
-    def TF_IDF(self,A,c,p):
+            return self.TF_IDF(A, c, p)
+
+    def TF_IDF(self, A, c, p):
         wpd = sum(A, axis=0)
-        dpw= sum(asarray(A > 0,'i'), axis=1)
+        dpw = sum(asarray(A > 0, 'i'), axis=1)
         rows, cols = A.shape
         for i in range(rows):
             for j in range(cols):
-                m=float(A[i,j])/wpd[j]
-                n=log(float(cols) /dpw[i])
-                A[i,j] =round(n*m,2)
-        gg=[]
+                m = float(A[i, j])/wpd[j]
+                n = log(float(cols) / dpw[i])
+                A[i, j] = round(n*m, 2)
+        gg = []
         for i, row in enumerate(A):
-            st=(c[i], row)
-            stt=sum(row)
+            st = (c[i], row)
+            stt = sum(row)
             gg.append(stt)
-        l=gg.index(max(gg))
-        return self.U_S_Vt(A,c,p,l)
-    def U_S_Vt(self,A,c,p,l):
-        U, S,Vt = numpy.linalg.svd(A)
+        l = gg.index(max(gg))
+        return self.U_S_Vt(A, c, p, l)
+
+    def U_S_Vt(self, A, c, p, l):
+        U, S, Vt = numpy.linalg.svd(A)
         rows, cols = U.shape
-        for j in range(0,cols):
-            for i  in range(0,rows):
-                U[i,j]=round(U[i,j],4)   
+        for j in range(0, cols):
+            for i in range(0, rows):
+                U[i, j] = round(U[i, j], 4)
         for i, row in enumerate(U):
-            st=(c[i], row[0:2])
-        kt=l
-        wordd=c[l]
-        res1=-1*U[:,0:1]
-        wx=res1[kt]
-        res2=-1*U[:,1:2]
-        wy=res2[kt]
-        Z=np.diag(S)
+            st = (c[i], row[0:2])
+        kt = l
+        wordd = c[l]
+        res1 = -1*U[:, 0:1]
+        wx = res1[kt]
+        res2 = -1*U[:, 1:2]
+        wy = res2[kt]
+        Z = np.diag(S)
         rows, cols = Vt.shape
-        for j in range(0,cols):
-            for i  in range(0,rows):
-                Vt[i,j]=round(Vt[i,j],4)
-        st=(-1*Vt[0:2, :])
-        res3=(-1*Vt[0:1, :])
-        res4=(-1*Vt[1:2, :])
-        X=numpy.dot(U[:,0:2],Z[0:2,0:2])
-        Y=numpy.dot(X,Vt[0:2,:] )
-        rows, cols =Y.shape      
-        return self.Word_Distance_Document(res1,wx,res2,wy,res3,res4,Vt,p,c,Z,U)
-    def  Word_Distance_Document(self,res1,wx,res2,wy,res3,res4,Vt,p,c,Z,U):
+        for j in range(0, cols):
+            for i in range(0, rows):
+                Vt[i, j] = round(Vt[i, j], 4)
+        st = (-1*Vt[0:2, :])
+        res3 = (-1*Vt[0:1, :])
+        res4 = (-1*Vt[1:2, :])
+        X = numpy.dot(U[:, 0:2], Z[0:2, 0:2])
+        Y = numpy.dot(X, Vt[0:2, :])
+        rows, cols = Y.shape
+        return self.Word_Distance_Document(res1, wx, res2, wy, res3, res4, Vt, p, c, Z, U)
+
+    def Word_Distance_Document(self, res1, wx, res2, wy, res3, res4, Vt, p, c, Z, U):
         xx, yy = -1 * Vt[0:2, :]
-        Q= np.matrix(U)
+        Q = np.matrix(U)
         UU = Q.T
         rows, cols = UU.shape
-        a=cols
-        b=cols
-        B = numpy.zeros([a,b])
-        for i in range(0,cols):
-            for j in range(0,cols):
+        a = cols
+        b = cols
+        B = numpy.zeros([a, b])
+        for i in range(0, cols):
+            for j in range(0, cols):
                 xxi, yyi = -1 * UU[0:2, i]
-                xxi1, yyi1 = -1 * UU[0:2, j]     
+                xxi1, yyi1 = -1 * UU[0:2, j]
                 param3 = float(xxi*xxi1+yyi*yyi1)
                 param4 = float(sqrt((xxi*xxi+yyi*yyi)*(xxi1*xxi1+yyi1*yyi1)))
-                if param4 != 0 : 
-                    B[i,j]=round(param3/param4,6)
+                if param4 != 0:
+                    B[i, j] = round(param3/param4, 6)
                 else:
-                    B[i,j] = 0
+                    B[i, j] = 0
         arts = []
-        print('Результаты анализа: Всего документов:%u. Осталось документов после исключения не связанных:%u\n'%(len(self.docs),len(self.doc)))
-        if len(self.docs)>len(self.doc):
+        print('Результаты анализа: Всего документов:%u. Осталось документов после исключения не связанных:%u\n' % (
+            len(self.docs), len(self.doc)))
+        if len(self.docs) > len(self.doc):
             print(" Оставшиеся документы после исключения не связанных:")
-            print('\n')     
+            print('\n')
             for k, v in enumerate(self.doc):
-                ww='Док.№ - %i. Text -%s'%(k,v)
+                ww = 'Док.№ - %i. Text -%s' % (k, v)
                 print(ww)
                 print('\n')
-        for k in range(0,len(self.doc)):
+        for k in range(0, len(self.doc)):
             ax, ay = xx[k], yy[k]
             dx, dy = float(wx - ax), float(wy - ay)
-            dist=float(sqrt(dx * dx + dy * dy))
-            arts.append((k,p[k],round(dist,3)))
-        q=(sorted(arts,key = lambda a: a[2]))
-        dd=[]
-        ddm=[]
-        aa=[]
-        bb=[]
-        for i in range(1,len(self.doc)):
-            cos1=q[i][2]
-            cos2=q[i-1][2]
-            qq=round(float(cos1-cos2),3)
-            tt=[(q[i-1])[0],(q[i])[0]]
+            dist = float(sqrt(dx * dx + dy * dy))
+            arts.append((k, p[k], round(dist, 3)))
+        q = (sorted(arts, key=lambda a: a[2]))
+        dd = []
+        ddm = []
+        aa = []
+        bb = []
+        for i in range(1, len(self.doc)):
+            cos1 = q[i][2]
+            cos2 = q[i-1][2]
+            qq = round(float(cos1-cos2), 3)
+            tt = [(q[i-1])[0], (q[i])[0]]
             dd.append(tt)
             ddm.append(qq)
-        for w in range(0,len(dd)):
-            i=ddm.index(min(ddm))
+        for w in range(0, len(dd)):
+            i = ddm.index(min(ddm))
             aa.append(dd[i])
             bb.append(ddm[i])
             del dd[i]
             del ddm[i]
 
         resultActial = 0
-        for i in range(0,len(aa)):
-            if len([w for w in p[aa[i][0]]if w in p[aa[i][1]]])!=0:
-                zz=[w for w in p[aa[i][0]]if w in p[aa[i][1]]]
+        for i in range(0, len(aa)):
+            if len([w for w in p[aa[i][0]]if w in p[aa[i][1]]]) != 0:
+                zz = [w for w in p[aa[i][0]]if w in p[aa[i][1]]]
             else:
-                zz=['нет общих слов']
-            cs=[]
+                zz = ['нет общих слов']
+            cs = []
             for w in zz:
                 if w not in cs:
-                        cs.append(w)
-            sc="Евклидова мера расстояния "
-            tr ='№ Док %s- %s-%s -Общие слова -%s'%(aa[i],bb[i],sc,cs)
+                    cs.append(w)
+            sc = "Евклидова мера расстояния "
+            tr = '№ Док %s- %s-%s -Общие слова -%s' % (aa[i], bb[i], sc, cs)
             if (float(bb[i]) >= 0.35) & (float((len(cs)/len(self.doc[0].split())*100)) > 30):
                 resultActial = 1
             else:
@@ -202,18 +216,23 @@ class LSA:
         self.status = resultActial
 
         return resultActial
+
     def out_green(self, text):
         print("\033[32m {}" .format(text))
         print("\033[0m")
+
     def out_red(self, text):
         print("\033[31m {}" .format(text))
         print("\033[0m")
+
     def out_yellow(self, text):
         print("\033[33m {}" .format(text))
         print("\033[0m")
+
     def out_blue(self, text):
         print("\033[34m {}" .format(text))
         print("\033[0m")
+
     def getResult(self):
         if self.status == 1:
             self.out_green("Базовый текст рекомендованный к рассмотрению")
@@ -221,11 +240,11 @@ class LSA:
             self.out_red("Базовый текст нельзя рекоммендовать к изучению")
 
         return self.status
-        
 
 
 stem = 'russian'
-stopwords = nltk.corpus.stopwords.words(stem)
+#stopwords = nltk.corpus.stopwords.words(stem)
+stopwords = ["a", "б", "в", "г", "е", "ж", "з", "м", "т", "у", "я", "є", "і", "аж", "ви", "де", "до", "за", "зі", "ми", "на", "не", "ну", "нх", "ні", "по", "та", "ти", "то", "ту", "ті", "це", "цю", "ця", "ці", "чи", "ще", "що", "як", "їй", "їм", "їх", "її", "або", "але", "ало", "без", "був", "вам", "вас", "ваш", "вже", "все", "всю", "вся", "від", "він", "два", "дві", "для", "ким", "мож", "моя", "моє", "мої", "міг", "між", "мій", "нам", "нас", "наш", "нею", "неї", "них", "ніж", "ній", "ось", "при", "про", "пір", "раз", "рік", "сам", "сих", "так", "там", "теж", "тим", "тих", "той", "тою", "три", "тут", "хоч", "хто", "цей", "цим", "цих", "час", "щоб", "яка", "які", "адже", "буде", "буду", "будь", "була", "були", "було", "бути", "вами", "ваша", "ваше", "ваші", "весь", "вниз", "вона", "вони", "воно", "всею", "всім", "всіх", "втім", "геть", "далі", "зате", "його", "йому", "каже", "кого", "коли", "кому", "крім", "куди", "лише", "мало", "мене", "мені", "мною", "нами", "наша", "наше", "наші", "ними", "ніби", "поки", "пора", "сама", "саме", "саму", "самі", "свою", "своє", "свої", "себе", "собі", "став", "така", "таке", "такі", "твоя", "твоє", "твій", "тебе", "тими", "тобі", "того", "тоді", "тому", "туди", "хоча", "хіба", "цими", "цієї", "інша", "інше", "інші", "буває", "будеш", "більш", "вгору", "внизу", "вісім", "кожен", "кожна", "кожне", "кожні", "краще", "ледве", "майже", "менше", "могти", "можна", "нього", "однак", "потім", "самим", "самих", "самій", "свого", "своєї", "своїх", "собою", "такий", "також", "тобою", "трохи", "усюди", "усіма", "хочеш", "цього", "цьому", "часто", "через", "якого", "іноді", "інший", "інших", "багато", "будемо", "будете", "будуть", "більше", "всього", "всьому", "далеко", "десять", "досить", "другий", "дійсно", "завжди", "звідси", "зовсім", "кругом", "кілька", "можуть", "навіть", "навіщо", "небудь", "низько", "ніколи", "нікуди", "нічого", "обидва", "одного", "однієї", "просто", "раніше", "раптом", "самими", "самого", "самому", "скрізь", "тільки", "близько", "важлива", "важливе", "важливі", "вдалині", "зайнята", "занадто", "значить", "навколо", "нарешті", "нерідко", "повинно", "посеред", "початку", "пізніше", "сказала", "сказати", "скільки", "спасибі", "частіше", "важливий", "зазвичай", "зайнятий", "звичайно", "здається", "найбільш", "недалеко", "особливо", "потрібно", "спочатку", "сьогодні", "численна", "численне", "численні", "відсотків", "звідусіль", "нещодавно", "численний", "будь-ласка", "безперервно"]
 
 def decode_redis(src):
     if isinstance(src, list):
@@ -241,16 +260,17 @@ def decode_redis(src):
     elif isinstance(src, bytes):
         return src.decode()
     else:
-        raise Exception("type not handled: " +type(src))
+        raise Exception("type not handled: " + type(src))
+
 
 io = StringIO()
 r = redis.Redis()
-sourceData = r.hgetall("lsa");
+sourceData = r.hgetall("lsa")
 sourceData = decode_redis(sourceData)
 for key in sourceData:
     item = json.loads(base64.b64decode(sourceData[key]).decode('utf-8'))
-    print(item)
-    
+    #print(item)
+
     docs = [
         item['questionText'],
         item['pageText']
@@ -261,9 +281,13 @@ for key in sourceData:
     obj.STart()
     result = obj.getResult()
 
-    current_milli_time = lambda: int(round(time.time() * 1000))
-    
-    if result == 1 :
+    def current_milli_time(): return int(round(time.time() * 1000))
+
+    if result == 1:
         tmpStr = json.dumps(item).encode('utf8')
         strBase64 = base64.b64encode(tmpStr)
         r.hset('notes', '{0}{1}'.format('note_', key), strBase64)
+
+    r.hdel("lsa", key)
+
+print(datetime.now() - start_time)

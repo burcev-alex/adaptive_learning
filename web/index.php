@@ -22,7 +22,7 @@ $redis = new \Predis\Client(
 );
 
 $userId = 4; // Александр Бурцев
-$courseId = 2; // ID курса
+$courseId = 11; // ID курса
 
 libxml_use_internal_errors(true);
 /* Createa a new DomDocument object */
